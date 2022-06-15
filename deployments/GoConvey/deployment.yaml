@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/project"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goconvey-deployment
+  labels:
+    app: goconvey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goconvey
+  template:
+    metadata:
+      labels:
+        app: goconvey
+    spec:
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: task-pv-claim
+      containers:
+      - name: goconvey
+        image: k3d-devenv-registry.localhost:5000/goconvey:local
+        volumeMounts:
+          - mountPath: "/go/src/github.com/ivan-kostko/car-service"
+            name: task-pv-storage
+        env:
+        - name: PORT
+          value: "9009"
+        - name: APP_SRC_PATH
+          value: "/go/src/github.com/ivan-kostko/car-service"
+        ports:
+        - containerPort: 9009
+      nodeSelector:
+        type: worker
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goconvey-service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 9009
+    targetPort: 9009
+    protocol: TCP
+  selector:
+    app: goconvey
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: goconvey
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: goconvey-service
+            port:
+              number: 9009

@@ -1,18 +1,9 @@
 package logger
 
-import(
-	"github.com/sirupsen/logrus"
-)
-
-var defaultLogger = &logrus.Logger{
-	Out: os.Stderr,
-	Formatter: new(logrus.TextFormatter),
-	Hooks: make(logrus.LevelHooks),
-	Level: logrus.DebugLevel,
-  }
-
+// Allias for fields
 type Fields map[string]interface{}
 
+// Extended logger interface supporting fields
 type FieldLogger interface {
 	WithField(key string, value interface{}) FieldLogger
 	WithFields(fields Fields) FieldLogger
@@ -51,10 +42,12 @@ type Logger struct {
 }
 
 func NewLogger(fl FieldLogger) *Logger {
-	if fi != nil {
-		return &Logger{
-			fi
-		}
+
+	var l = &Logger{}
+	if fl != nil {
+		l.FieldLogger = fl
+	} else {
+		l.FieldLogger = DefaultLogger
 	}
-	return defaultLogger
+	return l
 }

@@ -1,0 +1,23 @@
+FROM golang:1.18.3-alpine
+
+USER root
+
+ARG port
+ARG app_path
+
+ENV PORT=$port
+ENV APP_NAME=github.com/smartystreets/goconvey
+ENV APP_SRC_PATH=${GOPATH}/src/$app_path
+
+EXPOSE ${PORT}
+
+RUN echo "installing git" \
+ && apk update \
+ && apk add git \
+ && apk add build-base \
+ && echo "installing goconvey" \
+ && go install ${APP_NAME}@latest
+ ## && cd ${GOPATH}/src/${APP_NAME} \
+ ## && go install
+
+CMD goconvey -host=0.0.0.0 -port=${PORT} -workDir=${APP_SRC_PATH} -launchBrowser=false
